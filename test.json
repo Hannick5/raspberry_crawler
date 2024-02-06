@@ -1,0 +1,38 @@
+{
+  "date": "2024-02-06T06:28:04.975Z",
+  "measure": [
+    {
+      "name": "temperature",
+      "desc": "Température",
+      "unit": "C",
+      "value": "10.00"
+    },
+    { "name": "pressure", "desc": "Pression", "unit": "hP", "value": "994.99" },
+    { "name": "humidity", "desc": "Humidité", "unit": "%", "value": "50.0" },
+    { "name": "luminosity", "desc": "Luminosité", "unit": "Lux", "value": "1" },
+    {
+      "name": "wind_heading",
+      "desc": "Direction du vent",
+      "unit": "°",
+      "value": "120.271285753753"
+    },
+    {
+      "name": "wind_speed_avg",
+      "desc": "Force moyenne du vent",
+      "unit": "Kts",
+      "value": "39.7"
+    },
+    {
+      "name": "wind_speed_max",
+      "desc": "Force maxi du vent",
+      "unit": "Kts",
+      "value": "55.1"
+    },
+    {
+      "name": "wind_speed_min",
+      "desc": "Force moyenne du vent",
+      "unit": "Kts",
+      "value": "23.9"
+    }
+  ]
+}
