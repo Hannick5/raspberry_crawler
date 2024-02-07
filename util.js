@@ -59,4 +59,51 @@ function parseNMEA(filePath) {
     }
   }
 
-  module.exports = { parseNMEA, parseInterval };
+  function parseIntervalMS(interval) {
+    if (!interval) return null;
+    
+    const value = parseInt(interval.slice(0, -1)); // Récupère la valeur numérique
+    const unit = interval.slice(-1); // Récupère l'unité de temps
+  
+    switch (unit) {
+        case "s": return value * 1000; // Secondes
+        case "m": return value * 60000; // Minutes
+        case "h": return value * 3600000; // Heures
+        case "D": return value * 86400000; // Jours
+        case "M": return value * 2592000000; // Mois
+        case "Y": return value * 31536000000; // Années
+        default: return null;
+    }
+}
+
+
+function datesDansIntervalle(dateDebutISO, dateFinISO, intervalleEnMillisecondes) {
+  // Convertir les dates en objets Date
+  const debut = new Date(dateDebutISO);
+  const fin = new Date(dateFinISO);
+  
+  // Initialiser un tableau pour stocker les dates résultantes
+  const dates = [];
+
+  // Ajouter la date de début au tableau
+  dates.push(new Date(debut));
+
+  // Définir la date courante comme la date de début
+  let currentDate = new Date(debut);
+
+  // Tant que la date courante est inférieure à la date de fin
+  while (currentDate < fin) {
+      // Ajouter l'intervalle à la date courante
+      currentDate = new Date(currentDate.getTime() + intervalleEnMillisecondes);
+      
+      // Si la date résultante est inférieure ou égale à la date de fin, l'ajouter au tableau
+      if (currentDate <= fin) {
+          dates.push(new Date(currentDate));
+      }
+  }
+
+  // Retourner le tableau de dates
+  return dates;
+}
+
+  module.exports = { parseNMEA, parseInterval, parseIntervalMS, datesDansIntervalle };

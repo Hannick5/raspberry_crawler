@@ -4,7 +4,7 @@ const {parseNMEA} = require("./util.js");
 const token = process.env.INFLUXDB_TOKEN;
 const url = "http://localhost:8086";
 const org = "ensg";
-const bucket = "db_live_2";
+const bucket = "db_live";
 
 const client = new InfluxDB({ url, token });
 

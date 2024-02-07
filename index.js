@@ -13,7 +13,7 @@ app.use(cors());
 const token = process.env.INFLUXDB_TOKEN;
 const url = "http://localhost:8086";
 const org = "ensg";
-const bucket = "db_live_2";
+const bucket = "db_live";
 
 const client = new InfluxDB({ url, token });
 
@@ -73,7 +73,7 @@ async function main() {
 }
 
 // Appeler la fonction principale toutes les 30 secondes
-setInterval(main, 30000);
+setInterval(main, 1000);
 
 // Démarrer le serveur Express
 const PORT = process.env.PORT || 3000;
