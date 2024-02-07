@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
-const GPS = require("gps");
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
 
 const app = express();
@@ -16,8 +15,6 @@ const bucket = "db_live_2";
 const client = new InfluxDB({ url, token });
 
 const dataFilePath = "test.json";
-
-const gps = new GPS();
 
 // Fonction pour insérer les données dans la base de données InfluxDB
 async function insertDataToInfluxDB(filePath, coordPath, rainDataPath) {
@@ -178,16 +175,26 @@ async function queryFilteredDataFromInfluxDB() {
   return jsonData;
 }
 
-async function queryArchiveDataFromInfluxDB(date_debut=null, date_fin=null, champs=null) {
-    let fluxQuery;
-    const filePath = 'gpsNmea';
-    const { latitude, longitude } = parseNMEA(filePath);
-  
-    const logFilePath = 'rainCounter.log';
-    const logContent = fs.readFileSync(logFilePath, 'utf8');
-  
-    const queryApi = client.getQueryApi(org);
-    const measurements = [
+async function queryArchiveDataFromInfluxDB(
+  date_debut,
+  date_fin = null,
+  filter = null,
+  interval = null
+) {
+  let fluxQuery;
+  let measurements;
+  const filePath = "gpsNmea";
+  const { latitude, longitude } = parseNMEA(filePath);
+
+  const logFilePath = "rainCounter.log";
+  const logContent = fs.readFileSync(logFilePath, "utf8");
+
+  const queryApi = client.getQueryApi(org);
+
+  if (filter != null) {
+    measurements = filter;
+  } else {
+    measurements = [
       "temperature",
       "pressure",
       "humidity",
@@ -198,63 +205,99 @@ async function queryArchiveDataFromInfluxDB(date_debut=null, date_fin=null, cham
       "longitude",
       "latitude",
     ];
-    const jsonData = {
-      name: "SensorName",
-      location: { date: "", coords: [latitude, longitude] },
-      status: true,
-      measurements: {
-        date: "",
-        rain: logContent,
-        light: [],
-        temperature: [],
-        humidity: [],
-        pressure: [],
-        wind: { speed: [], direction: [] },
-      },
-    };
-  
-    const resultPromises = measurements.map(async (measurement) => {
-      let fieldName = measurement;
-      if (measurement === "luminosity") {
-        fieldName = "light";
-      } else if (measurement === "wind_heading") {
-        fieldName = "direction";
-      } else if (measurement === "wind_speed_avg") {
-        fieldName = "speed";
-      }
-  
-  
+  }
+
+  console.log(filter)
+
+  const intervalMs = parseInterval(interval);
+
+  const jsonData = {
+    name: "SensorName",
+    location: { date: "", coords: [latitude, longitude] },
+    status: true,
+    measurements: {
+      date: "",
+      rain: logContent,
+      light: [],
+      temperature: [],
+      humidity: [],
+      pressure: [],
+      wind: { speed: [], direction: [] },
+    },
+  };
+
+  const resultPromises = measurements.map(async (measurement) => {
+    let fieldName = measurement;
+    if (measurement === "luminosity") {
+      fieldName = "light";
+    } else if (measurement === "wind_heading") {
+      fieldName = "direction";
+    } else if (measurement === "wind_speed_avg") {
+      fieldName = "speed";
+    }
+
+    if (date_fin === null) {
       fluxQuery = `
-      from(bucket: "${bucket}")
-      |> range(start: 2024-02-06T05:28:04.976Z, stop: 2024-02-06T09:28:04.975Z)
-      |> filter(fn: (r) => r["_measurement"] == "${measurement}")
-      |> filter(fn: (r) => r["_field"] == "value")
-  `;
-  
-      const result = await queryApi.collectRows(fluxQuery);
-      if (result.length > 0) {
-        // Parcourir toutes les lignes de résultats
-        result.forEach(row => {
-          // Ajouter chaque valeur à la liste appropriée dans jsonData.measurements
-          if (fieldName === "speed" || fieldName === "direction") {
-            console.log(parseFloat(row._value))
-            jsonData.measurements.wind[fieldName].push(parseFloat(row._value));
-          } else {
-            jsonData.measurements[fieldName].push(parseFloat(row._value));
-          }
-        });
-      }
-    });
-  
-    await Promise.all(resultPromises);
-  
-    const currentDate = new Date().toISOString();
-    jsonData.location.date = currentDate;
-    jsonData.measurements.date = currentDate;
-  
-    return jsonData;
+        from(bucket: "${bucket}")
+        |> range(start: ${date_debut})
+        |> filter(fn: (r) => r["_measurement"] == "${measurement}")
+        |> filter(fn: (r) => r["_field"] == "value")
+      `;
+    } else {
+      fluxQuery = `
+        from(bucket: "${bucket}")
+        |> range(start: ${date_debut}, stop: ${date_fin})
+        |> filter(fn: (r) => r["_measurement"] == "${measurement}")
+        |> filter(fn: (r) => r["_field"] == "value")
+      `;
+    }
+    
+
+    if (intervalMs) {
+      fluxQuery += `|> aggregateWindow(every: ${intervalMs}, fn: mean)`;
+    }
+
+    const result = await queryApi.collectRows(fluxQuery);
+    if (result.length > 0) {
+      // Parcourir toutes les lignes de résultats
+      result.forEach((row) => {
+        // Ajouter chaque valeur à la liste appropriée dans jsonData.measurements
+        if (fieldName === "speed" || fieldName === "direction") {
+          jsonData.measurements.wind[fieldName].push(parseFloat(row._value));
+        } else {
+          jsonData.measurements[fieldName].push(parseFloat(row._value));
+        }
+      });
+    }
+  });
+
+  await Promise.all(resultPromises);
+
+  const currentDate = new Date().toISOString();
+  jsonData.location.date = currentDate;
+  jsonData.measurements.date = currentDate;
+
+  return jsonData;
 }
+
+function parseInterval(interval) {
+  if (!interval) return null;
   
+  const value = parseInt(interval.slice(0, -1)); // Récupère la valeur numérique
+  const unit = interval.slice(-1); // Récupère l'unité de temps
+
+  switch (unit) {
+    case "s": if(value<10) {return `${10}s`} else {return `${value}s`}; // Secondes
+    case "m": return `${value}m`; // Minutes
+    case "h": return `${value}h`; // Heures
+    case "D": return `${value}d`; // Jours
+    case "M": return `${value}mo`; // Mois
+    case "Y": return `${value}y`; // Années
+    default: return null;
+  }
+}
+
+
 
 // API
 
@@ -276,16 +319,23 @@ app.get("/live", async (req, res) => {
 });
 
 app.get("/archive", async (req, res) => {
-    try {
-        const data = await queryArchiveDataFromInfluxDB("2024-02-06T06:28:04.975Z", "2024-02-06T07:28:04.975Z");
-        res.json(data);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des données live:", error);
-      res
-        .status(500)
-        .json({ error: "Erreur lors de la récupération des données live" });
+  try {
+    const { from, to, filter, interval } = req.query;
+
+    if (from === undefined) {
+      return res.status(400).json({ error: "Le paramètre date_debut est obligatoire" });
     }
-  });
+
+    const filterArray = filter ? filter.split(',') : null;
+
+    const data = await queryArchiveDataFromInfluxDB(from, to, filterArray, interval);
+    res.json(data);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des données archive:", error);
+    res.status(500).json({ error: "Erreur lors de la récupération des données live" });
+  }
+});
+
 
 function parseNMEA(filePath) {
   const data = fs.readFileSync(filePath, "utf8");
@@ -350,6 +400,6 @@ setInterval(main, 1000);
 
 // Démarrer le serveur Express
 const PORT = process.env.PORT || 3000;
-app.listen(PORT,"0.0.0.0",() => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Serveur Express écoutant sur le port ${PORT}`);
 });
