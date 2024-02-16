@@ -1,6 +1,10 @@
 const fs = require("fs");
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
-const {parseInterval, parseIntervalMS, datesDansIntervalle} = require("./util.js");
+const {
+  parseInterval,
+  parseIntervalMS,
+  datesDansIntervalle,
+} = require("./util.js");
 const token = process.env.INFLUXDB_TOKEN;
 const url = "http://localhost:8086";
 const org = "ensg";
@@ -37,21 +41,18 @@ async function queryArchiveDataFromInfluxDB(
 
   const intervalMs = parseInterval(interval);
 
-  if(date_fin === null){
+  if (date_fin === null) {
     dateArray = [date_debut, new Date().toISOString()];
-  }
-  else{
+  } else {
     dateArray = [date_debut, date_fin];
   }
-
-  let date1 = datesDansIntervalle(dateArray[0], dateArray[1], parseIntervalMS(intervalMs));
 
   const jsonData = {
     name: "PIENSG030",
     location: { date: dateArray, coords: [] },
     status: true,
     measurements: {
-      date: date1,
+      date: dateArray,
       rain: [],
       light: [],
       temperature: [],
@@ -62,7 +63,6 @@ async function queryArchiveDataFromInfluxDB(
   };
 
   const resultPromises = measurements.map(async (measurement) => {
-
     fluxQuery = `
       from(bucket: "${bucket}")
       |> range(start: ${dateArray[0]}, stop: ${dateArray[1]})
@@ -107,8 +107,10 @@ async function queryArchiveDataFromInfluxDB(
   await Promise.all(resultPromises);
 
   const currentDate = new Date().toISOString();
-  jsonData.measurements.rain = jsonData.measurements.rain.length ? jsonData.measurements.rain : null;
+  jsonData.measurements.rain = jsonData.measurements.rain.length
+    ? jsonData.measurements.rain
+    : null;
 
   return jsonData;
 }
-  module.exports = {queryArchiveDataFromInfluxDB}
+module.exports = { queryArchiveDataFromInfluxDB };
