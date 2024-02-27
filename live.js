@@ -59,7 +59,10 @@ async function queryDataFromInfluxDB() {
       if (fieldName === "speed" || fieldName === "direction") {
         jsonData.measurements.wind[fieldName] = parseFloat(result[0]._value);
       } else if (fieldName === "rain") {
-        jsonData.measurements[fieldName] = result[0]._value;
+        let stringRes = result[0]._value;
+        let latestVal = stringRes.split("\r\n").pop();
+        console.log(latestVal)
+        jsonData.measurements[fieldName] = latestVal;
       } else if (fieldName === "latitude") {
         jsonData.location.coords[0] = parseFloat(result[0]._value);
       } else if (fieldName === "longitude") {

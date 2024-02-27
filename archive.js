@@ -39,7 +39,7 @@ async function queryArchiveDataFromInfluxDB(
     ];
   }
 
-  const intervalMs = parseInterval(interval);
+  let intervalMs = parseInterval(interval);
 
   if (date_fin === null) {
     dateArray = [date_debut, new Date().toISOString()];
@@ -47,12 +47,21 @@ async function queryArchiveDataFromInfluxDB(
     dateArray = [date_debut, date_fin];
   }
 
+  if (interval === null) {
+    intervalMs = '1d';
+  }
+  else {
+    intervalMs = parseInterval(interval);
+  }
+
+  let date1 = datesDansIntervalle(dateArray[0], dateArray[1], parseIntervalMS(intervalMs));
+
   const jsonData = {
     name: "PIENSG030",
     location: { date: dateArray, coords: [] },
     status: true,
     measurements: {
-      date: dateArray,
+      date: date1,
       rain: [],
       light: [],
       temperature: [],
@@ -84,7 +93,9 @@ async function queryArchiveDataFromInfluxDB(
         } else if (measurement === "latitude") {
           jsonData.location.coords[1] = parseFloat(row._value);
         } else if (measurement === "rain") {
-          jsonData.measurements.rain.push(row._value);
+          let stringRes = row._value;
+          let rainVal = stringRes.split("\r\n").length * 0.572;
+          jsonData.measurements.rain.push(parseFloat(rainVal.toFixed(3)));
         } else {
           let fieldName = measurement;
           if (measurement === "luminosity") {

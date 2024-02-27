@@ -2,10 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const { InfluxDB, Point } = require("@influxdata/influxdb-client");
-const {insertDataToInfluxDB} = require("./influxDB.js");
-const {queryArchiveDataFromInfluxDB} = require("./archive.js");
-const {queryDataFromInfluxDB} = require("./live.js");
-const {queryFilteredDataFromInfluxDB} = require("./live.js");
+const { insertDataToInfluxDB } = require("./influxDB.js");
+const { queryArchiveDataFromInfluxDB } = require("./archive.js");
+const { queryDataFromInfluxDB } = require("./live.js");
+const { queryFilteredDataFromInfluxDB } = require("./live.js");
 const app = express();
 
 app.use(cors());
