@@ -7,11 +7,12 @@ const url = "http://localhost:8086";
 const org = "ensg";
 const bucket = "db_live";
 
+console.log(token);
 const client = new InfluxDB({ url, token });
 async function insertDataToInfluxDB(filePath, coordPath, rainDataPath) {
     try {
         const { latitude, longitude } = parseNMEA(coordPath);
-        const logContent = fs.readFileSync(rainDataPath, "utf8").trim();
+        const logContent = fs.readFileSync(rainDataPath, "utf8").trim().split("\n");
         const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
         const writeClient = client.getWriteApi(org, bucket, "ns");
         // Insérer la longitude
@@ -28,7 +29,7 @@ async function insertDataToInfluxDB(filePath, coordPath, rainDataPath) {
 
         // Insérer les données de pluie
         const rainPoint = new Point("rain")
-            .stringField("value", logContent)
+            .floatField("value", logContent.length*0.3274)
             .timestamp(new Date(data.date));
         writeClient.writePoint(rainPoint);
 
@@ -55,5 +56,24 @@ async function insertDataToInfluxDB(filePath, coordPath, rainDataPath) {
     }
 }
 
+
+// Fonction principale pour lire les données et les insérer dans InfluxDB toutes les 30 secondes
+async function main() {
+  try {
+    await insertDataToInfluxDB("/dev/shm/sensors", "/dev/shm/gpsNmea", "/dev/shm/rainCounter.log");
+
+    console.log(
+      "Données interrogées avec succès depuis la base de données InfluxDB."
+    );
+  } catch (error) {
+    console.error(
+      "Erreur lors de l'insertion ou de l'interrogation des données dans la base de données InfluxDB :",
+      error
+    );
+  }
+}
+main();
+// Appeler la fonction principale toutes les 30 secondes
+setInterval(main, 30000);
 
 module.exports = { insertDataToInfluxDB }

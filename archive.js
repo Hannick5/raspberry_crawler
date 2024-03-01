@@ -79,10 +79,7 @@ async function queryArchiveDataFromInfluxDB(
       |> filter(fn: (r) => r["_field"] == "value")
     `;
 
-    if (measurement !== "rain" && intervalMs) {
-      fluxQuery += `|> aggregateWindow(every: ${intervalMs}, fn:mean)`;
-    }
-
+    fluxQuery += `|> aggregateWindow(every: ${intervalMs}, fn:mean)`;
     const result = await queryApi.collectRows(fluxQuery);
     if (result.length > 0) {
       // Parcourir toutes les lignes de résultats
@@ -92,10 +89,8 @@ async function queryArchiveDataFromInfluxDB(
           jsonData.location.coords[0] = parseFloat(row._value);
         } else if (measurement === "latitude") {
           jsonData.location.coords[1] = parseFloat(row._value);
-        } else if (measurement === "rain") {
-          let stringRes = row._value;
-          let rainVal = stringRes.split("\r\n").length * 0.572;
-          jsonData.measurements.rain.push(parseFloat(rainVal.toFixed(3)));
+        } else if (measurement === "rain"){
+          jsonData.measurements.rain.push(parseFloat(row._value));
         } else {
           let fieldName = measurement;
           if (measurement === "luminosity") {

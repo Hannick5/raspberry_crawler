@@ -58,12 +58,9 @@ async function queryDataFromInfluxDB() {
     if (result.length > 0) {
       if (fieldName === "speed" || fieldName === "direction") {
         jsonData.measurements.wind[fieldName] = parseFloat(result[0]._value);
-      } else if (fieldName === "rain") {
-        let stringRes = result[0]._value;
-        let latestVal = stringRes.split("\r\n").pop();
-        console.log(latestVal)
-        jsonData.measurements[fieldName] = latestVal;
-      } else if (fieldName === "latitude") {
+      } else if(fieldName === "rain"){
+	jsonData.measurements[fieldName] = result[0]._time;
+       } else if (fieldName === "latitude") {
         jsonData.location.coords[0] = parseFloat(result[0]._value);
       } else if (fieldName === "longitude") {
         jsonData.location.coords[1] = parseFloat(result[0]._value);
@@ -115,7 +112,7 @@ async function queryFilteredDataFromInfluxDB() {
     const result = await queryApi.collectRows(fluxQuery);
     if (result.length > 0) {
       if (measurement === "rain") {
-        jsonData.measurements[measurement] = result[0]._value;
+        jsonData.measurements[measurement] = result[0]._time;
       } else if (measurement === "latitude") {
         jsonData.location.coords[0] = parseFloat(result[0]._value);
       } else if (measurement === "longitude") {

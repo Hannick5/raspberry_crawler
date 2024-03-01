@@ -17,8 +17,6 @@ const bucket = "db_live";
 
 const client = new InfluxDB({ url, token });
 
-const dataFilePath = "test.json";
-
 // API
 
 app.get("/live", async (req, res) => {
@@ -41,7 +39,6 @@ app.get("/live", async (req, res) => {
 app.get("/archive", async (req, res) => {
   try {
     const { from, to, filter, interval } = req.query;
-
     if (from === undefined) {
       return res.status(400).json({ error: "Le paramètre date_debut est obligatoire" });
     }
@@ -56,27 +53,9 @@ app.get("/archive", async (req, res) => {
   }
 });
 
-// Fonction principale pour lire les données et les insérer dans InfluxDB toutes les 30 secondes
-async function main() {
-  try {
-    await insertDataToInfluxDB(dataFilePath, "gpsNmea", "rainCounter.log");
-
-    console.log(
-      "Données interrogées avec succès depuis la base de données InfluxDB."
-    );
-  } catch (error) {
-    console.error(
-      "Erreur lors de l'insertion ou de l'interrogation des données dans la base de données InfluxDB :",
-      error
-    );
-  }
-}
-
-// Appeler la fonction principale toutes les 30 secondes
-setInterval(main, 1000);
 
 // Démarrer le serveur Express
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Serveur Express écoutant sur le port ${PORT}`);
 });
